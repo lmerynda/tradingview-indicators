@@ -22,6 +22,16 @@ Oscillators are momentum indicators that fluctuate within a bounded range, helpi
   - %K Smoothing: 1
   - %D Smoothing: 3
 
+- **[CCI (Commodity Channel Index)](indicators/oscillators/CCI.pine)** - Measures the variation of price from its statistical mean
+  - Length: 20
+  - Overbought level: 100
+  - Oversold level: -100
+
+- **[Williams %R](indicators/oscillators/WilliamsR.pine)** - Momentum indicator that measures overbought and oversold levels
+  - Length: 14
+  - Overbought level: -20
+  - Oversold level: -80
+
 ### Trend Indicators
 Trend indicators help identify the direction and strength of market trends.
 
@@ -38,6 +48,12 @@ Trend indicators help identify the direction and strength of market trends.
   - Start: 0.02
   - Increment: 0.02
   - Maximum: 0.2
+
+- **[Ichimoku Cloud](indicators/trend/IchimokuCloud.pine)** - Comprehensive indicator showing support, resistance, and trend
+  - Tenkan-sen: 9
+  - Kijun-sen: 26
+  - Senkou Span B: 52
+  - Displacement: 26
 
 ### Volatility Indicators
 Volatility indicators measure the rate of price movements, regardless of direction.
@@ -69,6 +85,11 @@ Volume indicators analyze trading volume to confirm trends and identify potentia
 - **[Volume Profile](indicators/volume/VolumeProfile.pine)** - Shows volume distribution with moving average
   - Lookback Length: 20
   - MA Length: 20
+
+- **[MFI (Money Flow Index)](indicators/volume/MFI.pine)** - Volume-weighted RSI that measures buying and selling pressure
+  - Length: 14
+  - Overbought level: 80
+  - Oversold level: 20
 
 ## 🚀 How to Import Indicators into TradingView
 
