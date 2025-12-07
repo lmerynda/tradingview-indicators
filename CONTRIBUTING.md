@@ -29,8 +29,10 @@ Thank you for your interest in contributing to this project! We welcome contribu
    - If your indicator doesn't fit any category, you can create a new folder
 
 5. **Follow the File Naming Convention**
-   - Use PascalCase for file names (e.g., `RelativeStrengthIndex.pine`, `MACD.pine`)
-   - Use descriptive names that clearly identify the indicator
+   - Use PascalCase for file names
+   - For well-known indicators, use common abbreviations (e.g., `RSI.pine`, `MACD.pine`, `ATR.pine`)
+   - For full names, use descriptive PascalCase (e.g., `MovingAverages.pine`, `BollingerBands.pine`)
+   - Keep names concise but clear
 
 6. **Update the README**
    - Add your indicator to the appropriate section in `README.md`
