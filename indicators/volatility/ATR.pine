@@ -25,4 +25,4 @@ atrChangePercent = not na(atrValue[1]) and atrValue[1] != 0 ? (atrChange / atrVa
 plot(atrChangePercent, title="ATR % Change", color=atrChange > 0 ? color.green : color.red, display=display.none)
 
 // Alert conditions
-alertcondition(atrValue > ta.highest(atrValue[1], length), title="ATR New High", message="ATR reached new high")
+alertcondition(atrValue == ta.highest(atrValue, length) and atrValue > atrValue[1], title="ATR New High", message="ATR reached new high")
