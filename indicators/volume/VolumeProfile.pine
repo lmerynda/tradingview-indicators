@@ -5,7 +5,6 @@
 indicator("Volume Profile", shorttitle="VP", overlay=false)
 
 // Inputs
-length = input.int(20, minval=1, title="Lookback Length")
 showMA = input.bool(true, title="Show Volume MA")
 maLength = input.int(20, minval=1, title="MA Length")
 

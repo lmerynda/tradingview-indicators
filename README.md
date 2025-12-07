@@ -83,7 +83,6 @@ Volume indicators analyze trading volume to confirm trends and identify potentia
   - Supports SMA and EMA
 
 - **[Volume Profile](indicators/volume/VolumeProfile.pine)** - Shows volume distribution with moving average
-  - Lookback Length: 20
   - MA Length: 20
 
 - **[MFI (Money Flow Index)](indicators/volume/MFI.pine)** - Volume-weighted RSI that measures buying and selling pressure
