@@ -1,0 +1,32 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © TradingView Indicators
+
+//@version=5
+indicator("Stochastic Oscillator", shorttitle="Stoch", overlay=false)
+
+// Inputs
+kLength = input.int(14, minval=1, title="%K Length")
+kSmoothing = input.int(1, minval=1, title="%K Smoothing")
+dSmoothing = input.int(3, minval=1, title="%D Smoothing")
+overbought = input.int(80, minval=50, maxval=100, title="Overbought Level")
+oversold = input.int(20, minval=0, maxval=50, title="Oversold Level")
+
+// Stochastic Calculation
+k = ta.sma(ta.stoch(close, high, low, kLength), kSmoothing)
+d = ta.sma(k, dSmoothing)
+
+// Plot
+plot(k, title="%K", color=color.blue, linewidth=2)
+plot(d, title="%D", color=color.orange, linewidth=2)
+hline(overbought, title="Overbought", color=color.red, linestyle=hline.style_dashed)
+hline(oversold, title="Oversold", color=color.green, linestyle=hline.style_dashed)
+hline(50, title="Middle Line", color=color.gray, linestyle=hline.style_dotted)
+
+// Color the background when overbought or oversold
+bgcolor(k > overbought ? color.new(color.red, 90) : na, title="Overbought Background")
+bgcolor(k < oversold ? color.new(color.green, 90) : na, title="Oversold Background")
+
+// Alert conditions
+alertcondition(ta.cross(k, d), title="Stochastic Cross", message="Stochastic %K crossed %D")
+alertcondition(ta.cross(k, overbought), title="%K Crosses Overbought", message="%K crossed overbought level")
+alertcondition(ta.cross(oversold, k), title="%K Crosses Oversold", message="%K crossed oversold level")

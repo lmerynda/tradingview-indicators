@@ -1,0 +1,24 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © TradingView Indicators
+
+//@version=5
+indicator("Moving Average Convergence Divergence (MACD)", shorttitle="MACD", overlay=false)
+
+// Inputs
+fastLength = input.int(12, minval=1, title="Fast Length")
+slowLength = input.int(26, minval=1, title="Slow Length")
+signalLength = input.int(9, minval=1, title="Signal Smoothing")
+src = input.source(close, title="Source")
+
+// MACD Calculation
+[macdLine, signalLine, histLine] = ta.macd(src, fastLength, slowLength, signalLength)
+
+// Plot
+plot(macdLine, title="MACD Line", color=color.blue, linewidth=2)
+plot(signalLine, title="Signal Line", color=color.orange, linewidth=2)
+plot(histLine, title="Histogram", color=histLine >= 0 ? color.green : color.red, style=plot.style_histogram)
+hline(0, title="Zero Line", color=color.gray, linestyle=hline.style_solid)
+
+// Alert conditions
+alertcondition(ta.cross(macdLine, signalLine), title="MACD Cross", message="MACD line crossed signal line")
+alertcondition(ta.cross(macdLine, 0), title="MACD Zero Cross", message="MACD line crossed zero line")

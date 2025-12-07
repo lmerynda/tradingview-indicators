@@ -1,0 +1,28 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © TradingView Indicators
+
+//@version=5
+indicator("Average True Range (ATR)", shorttitle="ATR", overlay=false)
+
+// Inputs
+length = input.int(14, minval=1, title="ATR Length")
+smoothingType = input.string("RMA", title="Smoothing Type", options=["RMA", "SMA", "EMA", "WMA"])
+
+// ATR Calculation based on smoothing type
+atrValue = switch smoothingType
+    "RMA" => ta.rma(ta.tr, length)
+    "SMA" => ta.sma(ta.tr, length)
+    "EMA" => ta.ema(ta.tr, length)
+    "WMA" => ta.wma(ta.tr, length)
+    => ta.rma(ta.tr, length)
+
+// Plot
+plot(atrValue, title="ATR", color=color.blue, linewidth=2)
+
+// Show percentage change
+atrChange = ta.change(atrValue)
+atrChangePercent = (atrChange / atrValue[1]) * 100
+plot(atrChangePercent, title="ATR % Change", color=atrChange > 0 ? color.green : color.red, display=display.none)
+
+// Alert conditions
+alertcondition(atrValue > ta.highest(atrValue[1], length), title="ATR New High", message="ATR reached new high")

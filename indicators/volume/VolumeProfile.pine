@@ -1,0 +1,29 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © TradingView Indicators
+
+//@version=5
+indicator("Volume Profile", shorttitle="VP", overlay=false)
+
+// Inputs
+length = input.int(20, minval=1, title="Lookback Length")
+showMA = input.bool(true, title="Show Volume MA")
+maLength = input.int(20, minval=1, title="MA Length")
+
+// Volume calculations
+avgVolume = ta.sma(volume, maLength)
+relativeVolume = volume / avgVolume
+
+// Determine volume type
+buyingVolume = close > open ? volume : 0
+sellingVolume = close < open ? volume : 0
+neutralVolume = close == open ? volume : 0
+
+// Plot
+plot(volume, title="Volume", color=close > open ? color.green : close < open ? color.red : color.gray, style=plot.style_histogram, linewidth=2)
+plot(showMA ? avgVolume : na, title="Volume MA", color=color.orange, linewidth=2)
+
+// Color background based on relative volume
+bgcolor(relativeVolume > 1.5 ? color.new(color.yellow, 90) : na, title="High Volume Background")
+
+// Alert conditions
+alertcondition(relativeVolume > 2, title="High Volume Alert", message="Volume is 2x higher than average")
