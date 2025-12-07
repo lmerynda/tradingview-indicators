@@ -29,7 +29,7 @@ if isNewPeriod
 
 sumSrcVol += src * volume
 sumVol += volume
-vwap := sumSrcVol / sumVol
+vwap := sumVol > 0 ? sumSrcVol / sumVol : src
 
 // Standard Deviation Calculation
 var float sumSqDiff = 0.0
@@ -37,7 +37,7 @@ if isNewPeriod
     sumSqDiff := 0.0
 
 sumSqDiff += math.pow(src - vwap, 2) * volume
-variance = sumSqDiff / sumVol
+variance = sumVol > 0 ? sumSqDiff / sumVol : 0
 stdDev = math.sqrt(variance)
 
 // Bands

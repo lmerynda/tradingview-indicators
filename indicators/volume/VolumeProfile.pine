@@ -11,7 +11,7 @@ maLength = input.int(20, minval=1, title="MA Length")
 
 // Volume calculations
 avgVolume = ta.sma(volume, maLength)
-relativeVolume = volume / avgVolume
+relativeVolume = avgVolume != 0 ? volume / avgVolume : 1
 
 // Determine volume type
 buyingVolume = close > open ? volume : 0

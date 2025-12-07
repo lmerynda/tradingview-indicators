@@ -10,7 +10,8 @@ overbought = input.int(-20, minval=-50, maxval=0, title="Overbought Level")
 oversold = input.int(-80, minval=-100, maxval=-50, title="Oversold Level")
 
 // Williams %R Calculation
-williamsR = -100 * (ta.highest(high, length) - close) / (ta.highest(high, length) - ta.lowest(low, length))
+range_value = ta.highest(high, length) - ta.lowest(low, length)
+williamsR = range_value != 0 ? -100 * (ta.highest(high, length) - close) / range_value : -50
 
 // Plot
 plot(williamsR, title="Williams %R", color=color.blue, linewidth=2)
