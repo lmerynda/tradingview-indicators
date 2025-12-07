@@ -1,7 +1,7 @@
 // This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
 // © TradingView Indicators
 
-//@version=5
+//@version=6
 indicator("Volume Weighted Average Price (VWAP)", shorttitle="VWAP", overlay=true)
 
 // Inputs
@@ -11,6 +11,12 @@ showBands = input.bool(true, title="Show Standard Deviation Bands")
 mult1 = input.float(1.0, minval=0.1, title="1st Band Multiplier")
 mult2 = input.float(2.0, minval=0.1, title="2nd Band Multiplier")
 mult3 = input.float(2.3, minval=0.1, title="3rd Band Multiplier (Extension)")
+// Fill color inputs (light background similar to TradingView's VWAP)
+band1Fill = input.color(color.new(color.blue, 90), title="Band 1 Fill Color")
+band2Fill = input.color(color.new(color.blue, 92), title="Band 2 Fill Color")
+band3Fill = input.color(color.new(color.blue, 94), title="Band 3 Fill Color")
+// Toggle for fills (fill() must be used at global scope)
+showFills = input.bool(true, title="Show Band Fills")
 
 // VWAP Calculation
 var float sumSrcVol = 0.0
@@ -24,7 +30,7 @@ isNewPeriod = switch anchorPeriod
     "Month" => ta.change(time("M"))
     => ta.change(time("D"))
 
-if isNewPeriod
+if isNewPeriod != 0
     sumSrcVol := 0.0
     sumVol := 0.0
 
@@ -34,7 +40,7 @@ vwap := sumVol > 0 ? sumSrcVol / sumVol : src
 
 // Standard Deviation Calculation
 var float sumSqDiff = 0.0
-if isNewPeriod
+if isNewPeriod != 0
     sumSqDiff := 0.0
 
 sumSqDiff += math.pow(src - vwap, 2) * volume
@@ -50,13 +56,18 @@ upperBand3 = vwap + mult3 * stdDev
 lowerBand3 = vwap - mult3 * stdDev
 
 // Plot
-plot(vwap, title="VWAP", color=color.blue, linewidth=2)
-plot(showBands ? upperBand1 : na, title="Upper Band 1", color=color.new(color.green, 50), linewidth=1)
-plot(showBands ? lowerBand1 : na, title="Lower Band 1", color=color.new(color.red, 50), linewidth=1)
-plot(showBands ? upperBand2 : na, title="Upper Band 2", color=color.new(color.green, 70), linewidth=1)
-plot(showBands ? lowerBand2 : na, title="Lower Band 2", color=color.new(color.red, 70), linewidth=1)
-plot(showBands ? upperBand3 : na, title="Upper Band 3 (Extension)", color=color.new(color.green, 80), linewidth=1)
-plot(showBands ? lowerBand3 : na, title="Lower Band 3 (Extension)", color=color.new(color.red, 80), linewidth=1)
+p_vwap = plot(vwap, title="VWAP", color=color.blue, linewidth=2)
+p_u1 = plot(showBands ? upperBand1 : na, title="Upper Band 1", color=color.new(color.green, 50), linewidth=1)
+p_l1 = plot(showBands ? lowerBand1 : na, title="Lower Band 1", color=color.new(color.red, 50), linewidth=1)
+p_u2 = plot(showBands ? upperBand2 : na, title="Upper Band 2", color=color.new(color.green, 70), linewidth=1)
+p_l2 = plot(showBands ? lowerBand2 : na, title="Lower Band 2", color=color.new(color.red, 70), linewidth=1)
+p_u3 = plot(showBands ? upperBand3 : na, title="Upper Band 3 (Extension)", color=color.new(color.green, 80), linewidth=1)
+p_l3 = plot(showBands ? lowerBand3 : na, title="Lower Band 3 (Extension)", color=color.new(color.red, 80), linewidth=1)
+
+// Fill between bands with light background colors (call at global scope)
+fill(p_u1, p_l1, color= showFills and showBands ? band1Fill : na)
+fill(p_u2, p_l2, color= showFills and showBands ? band2Fill : na)
+fill(p_u3, p_l3, color= showFills and showBands ? band3Fill : na)
 
 // Alert conditions
 alertcondition(ta.cross(close, vwap), title="Price Crosses VWAP", message="Price crossed VWAP")
