@@ -21,7 +21,7 @@ plot(atrValue, title="ATR", color=color.blue, linewidth=2)
 
 // Show percentage change
 atrChange = ta.change(atrValue)
-atrChangePercent = (atrChange / atrValue[1]) * 100
+atrChangePercent = atrValue[1] != 0 and not na(atrValue[1]) ? (atrChange / atrValue[1]) * 100 : 0
 plot(atrChangePercent, title="ATR % Change", color=atrChange > 0 ? color.green : color.red, display=display.none)
 
 // Alert conditions

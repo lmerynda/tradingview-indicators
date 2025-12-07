@@ -145,9 +145,11 @@ Contributions are welcome! If you have improvements or additional indicators:
 
 ## 📄 License
 
-This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
+This repository is dual-licensed:
 
-Pine Script code files may also be licensed under the Mozilla Public License 2.0 as indicated in individual file headers.
+- **Repository structure and documentation** (README.md, CONTRIBUTING.md, etc.) are licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
+
+- **Pine Script indicator files** (*.pine) are licensed under the Mozilla Public License 2.0 as indicated in individual file headers, allowing easier integration with TradingView.
 
 ## ⚠️ Disclaimer
 
