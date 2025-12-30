@@ -20,11 +20,6 @@ asiaSession = input.session("1700-0159", title="Asia Session (in session timezon
 europeSession = input.session("0200-0829", title="Europe Session (in session timezone)")
 usSession = input.session("0830-1559", title="US Session (in session timezone)")
 
-// Style inputs
-// Security fallbacks (use lower/higher timeframe data when chart TF is coarser)
-useSecurity30s = input.bool(true, title="Use 30s security fallback (for coarse charts)")
-useSecurity30m = input.bool(true, title="Use 30min security fallback (for coarse charts)")
-
 // Visual styling
 orLineColor = input.color(color.rgb(255,215,0), title="OR Line Color")
 orLabelBg = input.color(color.rgb(255,215,0), title="OR Label Background Color")
@@ -70,10 +65,6 @@ var string activeSessionName = na
 
 // We anchor lines using absolute timestamps (`xloc.bar_time`), so a bar_index anchor is not required.
 var int activeSessionBar = na
-
-// Opening range end timestamps (ms) (use active session)
-or30s_end = not na(activeSessionStart) ? activeSessionStart + 30 * 1000 : na
-or30m_end = not na(activeSessionStart) ? activeSessionStart + 30 * 60 * 1000 : na
 
 // OR variables
 var float or30s_high = na
@@ -128,6 +119,10 @@ if newSession
 
     log.info("ORB session start: name={0}, start={1}, tz={2}", activeSessionName, activeSessionStart, sessTz)
 
+// Opening range end timestamps (ms) - calculated AFTER activeSessionStart is set
+or30s_end = not na(activeSessionStart) ? activeSessionStart + 30 * 1000 : na
+or30m_end = not na(activeSessionStart) ? activeSessionStart + 30 * 60 * 1000 : na
+
 // Draw vertical session markers (always) and labels (if enabled)
 if asiaStart
     line.new(x1=bar_index, y1=low, x2=bar_index, y2=high, color=asiaColor, width=1, style=line.style_dashed)
@@ -143,35 +138,23 @@ if usStart
         label.new(x=bar_index, y=high, text="US", xloc=xloc.bar_index, yloc=yloc.abovebar, style=label.style_label_down, color=usColor, textcolor=color.white, size=lblSize)
 
 // Update high/low during the OR periods
+// For 30s OR: Always use request.security to get accurate data from 30-second bars
+// This ensures correct levels even on higher TF charts (2min, 5min, etc.)
 if show30s
-    if useSecurity30s
-        [h30s_s, l30s_s, t30s_s] = request.security(syminfo.tickerid, "30S", [high, low, time], gaps=barmerge.gaps_off)
-        if not na(t30s_s) and not na(activeSessionStart) and t30s_s >= activeSessionStart and t30s_s <= or30s_end
-            or30s_high := nz(or30s_high, h30s_s)
-            or30s_high := math.max(or30s_high, h30s_s)
-            or30s_low := nz(or30s_low, l30s_s)
-            or30s_low := math.min(or30s_low, l30s_s)
-    else
-        if not na(activeSessionStart) and time >= activeSessionStart and time <= or30s_end
-            or30s_high := nz(or30s_high, high)
-            or30s_high := math.max(or30s_high, high)
-            or30s_low := nz(or30s_low, low)
-            or30s_low := math.min(or30s_low, low)
+    // Request data from 30-second timeframe for precision
+    [h30s_s, l30s_s, t30s_s] = request.security(syminfo.tickerid, "30S", [high, low, time], gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+    inOr30sWindow = not na(t30s_s) and not na(activeSessionStart) and t30s_s >= activeSessionStart and t30s_s < or30s_end
+    if inOr30sWindow
+        or30s_high := na(or30s_high) ? h30s_s : math.max(or30s_high, h30s_s)
+        or30s_low := na(or30s_low) ? l30s_s : math.min(or30s_low, l30s_s)
 
+// For 30m OR: Always use request.security to get accurate data from 30-minute bars
 if show30m
-    if useSecurity30m
-        [h30m_s, l30m_s, t30m_s] = request.security(syminfo.tickerid, "30", [high, low, time], gaps=barmerge.gaps_off)
-        if not na(t30m_s) and not na(activeSessionStart) and t30m_s >= activeSessionStart and t30m_s <= or30m_end
-            or30m_high := nz(or30m_high, h30m_s)
-            or30m_high := math.max(or30m_high, h30m_s)
-            or30m_low := nz(or30m_low, l30m_s)
-            or30m_low := math.min(or30m_low, l30m_s)
-    else
-        if not na(activeSessionStart) and time >= activeSessionStart and time <= or30m_end
-            or30m_high := nz(or30m_high, high)
-            or30m_high := math.max(or30m_high, high)
-            or30m_low := nz(or30m_low, low)
-            or30m_low := math.min(or30m_low, low)
+    [h30m_s, l30m_s, t30m_s] = request.security(syminfo.tickerid, "30", [high, low, time], gaps=barmerge.gaps_off, lookahead=barmerge.lookahead_on)
+    inOr30mWindow = not na(t30m_s) and not na(activeSessionStart) and t30m_s >= activeSessionStart and t30m_s < or30m_end
+    if inOr30mWindow
+        or30m_high := na(or30m_high) ? h30m_s : math.max(or30m_high, h30m_s)
+        or30m_low := na(or30m_low) ? l30m_s : math.min(or30m_low, l30m_s)
 
 // When OR completes, draw box and boundary lines (create once per session)
 // When OR completes, draw lines and labels
