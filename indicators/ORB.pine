@@ -11,30 +11,21 @@ indicator("Opening Range (ORB) — 30s & 30min", shorttitle="ORB", overlay=true)
 show30s = input.bool(true, title="Show 30s Opening Range")
 show30m = input.bool(true, title="Show 30min Opening Range")
 
-// Session customization (useful for replaying historical days)
-sessHour = input.int(9, title="Session Start Hour (24h)", minval=0, maxval=23)
-sessMin = input.int(30, title="Session Start Minute", minval=0, maxval=59)
-useChartTz = input.bool(true, title="Use Chart Timezone for Session Start")
-sessTzInput = input.string("UTC", title="Session Timezone (when not using Chart TZ)")
-sessTz = useChartTz ? syminfo.timezone : sessTzInput
-// Session selection mode: Latest session, or Manual date
-// Session display mode: Per-Session (keep N), Latest, or Manual
-sessionMode = input.string("Per-Session", title="Session Mode", options=["Per-Session","Latest","Manual"])
-// Manual date: use 0 as sentinel default (const). If left at 0, we'll treat it as today's session start.
-manualDate = input.time(defval=0, title="Manual Session Date (when Manual mode)")
+// Timezone for session windows
+useNewYorkTz = input.bool(false, title="Use New York time (ET) for sessions")
+sessTz = useNewYorkTz ? "America/New_York" : syminfo.timezone
+
+// Session windows (times are interpreted in `sessTz`)
+asiaSession = input.session("1700-0159", title="Asia Session (in session timezone)")
+europeSession = input.session("0200-0829", title="Europe Session (in session timezone)")
+usSession = input.session("0830-1559", title="US Session (in session timezone)")
 
 // Style inputs
-fill30s = input.color(color.new(color.orange, 90), title="30s Fill Color")
-border30s = input.color(color.new(color.orange, 40), title="30s Border Color")
-fill30m = input.color(color.new(color.purple, 90), title="30min Fill Color")
-border30m = input.color(color.new(color.purple, 40), title="30min Border Color")
 // Security fallbacks (use lower/higher timeframe data when chart TF is coarser)
 useSecurity30s = input.bool(true, title="Use 30s security fallback (for coarse charts)")
 useSecurity30m = input.bool(true, title="Use 30min security fallback (for coarse charts)")
 
-// Per-session display options
-sessionsToShow = input.int(3, title="Sessions To Keep (Per-Session mode)", minval=1, maxval=20)
-highlightLatest = input.bool(true, title="Highlight Latest Session")
+// Visual styling
 orLineColor = input.color(color.rgb(255,215,0), title="OR Line Color")
 orLabelBg = input.color(color.rgb(255,215,0), title="OR Label Background Color")
 orLabelText = input.color(color.black, title="OR Label Text Color")
@@ -53,45 +44,25 @@ else if labelSizeInput == "large"
 else
     lblSize := size.large
 
-// Session anchor (uses trading day)
-var int sessionStart = na
-var int sessionBar = na
-// Detect session start based on configured start time (works in replay)
-// sessionStartTS is the timestamp (ms) of today's configured session start in the chosen timezone
-sessionStartTS = timestamp(sessTz, year, month, dayofmonth, sessHour, sessMin)
-isSessionStartBar = (time >= sessionStartTS) and (time[1] < sessionStartTS)
-newSession = isSessionStartBar
-if newSession
-    sessionStart := sessionStartTS
-    sessionBar := bar_index
-// Track latest session start seen while iterating bars (helps anchor to most recent session)
-var int latestSessionStart = na
-var int latestSessionBar = na
-if isSessionStartBar
-    latestSessionStart := sessionStartTS
-    latestSessionBar := bar_index
+// Session detection (start on the first bar that enters each session window).
+asiaT = time(timeframe.period, asiaSession, sessTz)
+europeT = time(timeframe.period, europeSession, sessTz)
+usT = time(timeframe.period, usSession, sessTz)
 
-// Choose active session according to mode (Latest or Manual)
-// If user left manualDate at the sentinel 0, use today's configured session start timestamp
-manualDateEffective = manualDate == 0 ? sessionStartTS : manualDate
+inAsia = not na(asiaT)
+inEurope = not na(europeT)
+inUS = not na(usT)
 
-// Active session: compute a robust 'latest' session start for the current bar
-// If Manual mode is selected use the manual date; otherwise compute the most
-// recent session start timestamp relative to the current bar (uses previous
-// day when the bar is before today's session start). This avoids depending
-// on detecting an exact session-start bar and fixes cases where "Latest"
-// would appear empty.
-prevDayTime = time - 24 * 60 * 60 * 1000
-prevYear = year(prevDayTime)
-prevMonth = month(prevDayTime)
-prevDay = dayofmonth(prevDayTime)
-sessionStartForBar = timestamp(sessTz, year, month, dayofmonth, sessHour, sessMin)
-prevSessionStartForBar = timestamp(sessTz, prevYear, prevMonth, prevDay, sessHour, sessMin)
-computedLatestSessionStart = time >= sessionStartForBar ? sessionStartForBar : prevSessionStartForBar
+asiaStart = not na(asiaT) and na(asiaT[1])
+europeStart = not na(europeT) and na(europeT[1])
+usStart = not na(usT) and na(usT[1])
 
-activeSessionStart = sessionMode == "Manual" ? manualDateEffective : computedLatestSessionStart
-// We will anchor lines using absolute timestamps (`xloc.bar_time`) for both
-// Manual and Latest modes so a bar_index anchor is not required.
+newSession = asiaStart or europeStart or usStart
+
+var int activeSessionStart = na
+var string activeSessionName = na
+
+// We anchor lines using absolute timestamps (`xloc.bar_time`), so a bar_index anchor is not required.
 var int activeSessionBar = na
 
 // Opening range end timestamps (ms) (use active session)
@@ -113,22 +84,17 @@ var label lab30s_h = na
 var label lab30s_l = na
 var label lab30m_h = na
 var label lab30m_l = na
-// Arrays to store historical session objects (Per-Session mode)
-var line[] arr_h30s = array.new_line()
-var line[] arr_l30s = array.new_line()
-var label[] arr_lab30s_h = array.new_label()
-var label[] arr_lab30s_l = array.new_label()
-var line[] arr_h30m = array.new_line()
-var line[] arr_l30m = array.new_line()
-var label[] arr_lab30m_h = array.new_label()
-var label[] arr_lab30m_l = array.new_label()
+// On new session start: set the anchor, and delete prior session OR levels so only the current session remains.
+if newSession
+    activeSessionStart := time
+    activeSessionName := asiaStart ? "Asia" : europeStart ? "Europe" : "US"
+    activeSessionBar := bar_index
 
-// Reset on new session (Latest mode clears previous single-session objects)
-if newSession and sessionMode == "Latest"
     or30s_high := na
     or30s_low := na
     or30m_high := na
     or30m_low := na
+
     if not na(h30s)
         line.delete(h30s)
         h30s := na
@@ -153,41 +119,8 @@ if newSession and sessionMode == "Latest"
     if not na(lab30m_l)
         label.delete(lab30m_l)
         lab30m_l := na
-// In Per-Session mode, maintain arrays but trim to configured size
-if newSession and sessionMode == "Per-Session"
-    // trim arrays if they grew too large (cleanup performed on insertion below as well)
-    while array.size(arr_h30s) > sessionsToShow
-        old = array.shift(arr_h30s)
-        if not na(old)
-            line.delete(old)
-    while array.size(arr_l30s) > sessionsToShow
-        old = array.shift(arr_l30s)
-        if not na(old)
-            line.delete(old)
-    while array.size(arr_lab30s_h) > sessionsToShow
-        old = array.shift(arr_lab30s_h)
-        if not na(old)
-            label.delete(old)
-    while array.size(arr_lab30s_l) > sessionsToShow
-        old = array.shift(arr_lab30s_l)
-        if not na(old)
-            label.delete(old)
-    while array.size(arr_h30m) > sessionsToShow
-        old = array.shift(arr_h30m)
-        if not na(old)
-            line.delete(old)
-    while array.size(arr_l30m) > sessionsToShow
-        old = array.shift(arr_l30m)
-        if not na(old)
-            line.delete(old)
-    while array.size(arr_lab30m_h) > sessionsToShow
-        old = array.shift(arr_lab30m_h)
-        if not na(old)
-            label.delete(old)
-    while array.size(arr_lab30m_l) > sessionsToShow
-        old = array.shift(arr_lab30m_l)
-        if not na(old)
-            label.delete(old)
+
+    log.info("ORB session start: name={0}, start={1}, tz={2}", activeSessionName, activeSessionStart, sessTz)
 
 // Update high/low during the OR periods
 if show30s
@@ -199,7 +132,7 @@ if show30s
             or30s_low := nz(or30s_low, l30s_s)
             or30s_low := math.min(or30s_low, l30s_s)
     else
-        if not na(activeSessionStart) and time <= or30s_end
+        if not na(activeSessionStart) and time >= activeSessionStart and time <= or30s_end
             or30s_high := nz(or30s_high, high)
             or30s_high := math.max(or30s_high, high)
             or30s_low := nz(or30s_low, low)
@@ -214,7 +147,7 @@ if show30m
             or30m_low := nz(or30m_low, l30m_s)
             or30m_low := math.min(or30m_low, l30m_s)
     else
-        if not na(activeSessionStart) and time <= or30m_end
+        if not na(activeSessionStart) and time >= activeSessionStart and time <= or30m_end
             or30m_high := nz(or30m_high, high)
             or30m_high := math.max(or30m_high, high)
             or30m_low := nz(or30m_low, low)
@@ -230,33 +163,7 @@ if show30s and time > or30s_end and not na(or30s_high) and na(h30s)
     // right-aligned labels centered on the line
     lab30s_h := label.new(x=bar_index, y=or30s_high, text=str.format("30s H: {0}", str.tostring(or30s_high, format.mintick)), xloc=xloc.bar_index, yloc=yloc.price, style=label.style_label_right, color=orLabelBg, textcolor=orLabelText, size=lblSize)
     lab30s_l := label.new(x=bar_index, y=or30s_low, text=str.format("30s L: {0}", str.tostring(or30s_low, format.mintick)), xloc=xloc.bar_index, yloc=yloc.price, style=label.style_label_right, color=orLabelBg, textcolor=orLabelText, size=lblSize)
-    // store handles for Per-Session mode and trim old sessions
-    array.push(arr_h30s, h30s)
-    array.push(arr_l30s, l30s)
-    array.push(arr_lab30s_h, lab30s_h)
-    array.push(arr_lab30s_l, lab30s_l)
-    // Log OR creation and storage
-    log.info("ORB event: 30s OR created: start={0}, H={1}, L={2}, storedSessions={3}", activeSessionStart, or30s_high, or30s_low, array.size(arr_h30s))
-    while array.size(arr_h30s) > sessionsToShow
-        old = array.shift(arr_h30s)
-        if not na(old)
-            line.delete(old)
-            log.info("ORB event: trimmed arr_h30s, new_size={0}", array.size(arr_h30s))
-    while array.size(arr_l30s) > sessionsToShow
-        old = array.shift(arr_l30s)
-        if not na(old)
-            line.delete(old)
-            log.info("ORB event: trimmed arr_l30s, new_size={0}", array.size(arr_l30s))
-    while array.size(arr_lab30s_h) > sessionsToShow
-        old = array.shift(arr_lab30s_h)
-        if not na(old)
-            label.delete(old)
-            log.info("ORB event: trimmed arr_lab30s_h, new_size={0}", array.size(arr_lab30s_h))
-    while array.size(arr_lab30s_l) > sessionsToShow
-        old = array.shift(arr_lab30s_l)
-        if not na(old)
-            label.delete(old)
-            log.info("ORB event: trimmed arr_lab30s_l, new_size={0}", array.size(arr_lab30s_l))
+    log.info("ORB event: 30s OR created: session={0}, start={1}, H={2}, L={3}", activeSessionName, activeSessionStart, or30s_high, or30s_low)
 
 if show30m and time > or30m_end and not na(or30m_high) and na(h30m)
     if not na(activeSessionStart)
@@ -264,33 +171,21 @@ if show30m and time > or30m_end and not na(or30m_high) and na(h30m)
         l30m := line.new(x1=activeSessionStart, y1=or30m_low, x2=time, y2=or30m_low, xloc=xloc.bar_time, extend=extend.right, color=orLineColor, width=2)
     lab30m_h := label.new(x=bar_index, y=or30m_high, text=str.format("30m H: {0}", str.tostring(or30m_high, format.mintick)), xloc=xloc.bar_index, yloc=yloc.price, style=label.style_label_right, color=orLabelBg, textcolor=orLabelText, size=lblSize)
     lab30m_l := label.new(x=bar_index, y=or30m_low, text=str.format("30m L: {0}", str.tostring(or30m_low, format.mintick)), xloc=xloc.bar_index, yloc=yloc.price, style=label.style_label_right, color=orLabelBg, textcolor=orLabelText, size=lblSize)
-    // store handles for Per-Session mode and trim old sessions
-    array.push(arr_h30m, h30m)
-    array.push(arr_l30m, l30m)
-    array.push(arr_lab30m_h, lab30m_h)
-    array.push(arr_lab30m_l, lab30m_l)
-    // Log OR creation and storage
-    log.info("ORB event: 30m OR created: start={0}, H={1}, L={2}, storedSessions={3}", activeSessionStart, or30m_high, or30m_low, array.size(arr_h30m))
-    while array.size(arr_h30m) > sessionsToShow
-        old = array.shift(arr_h30m)
-        if not na(old)
-            line.delete(old)
-            log.info("ORB event: trimmed arr_h30m, new_size={0}", array.size(arr_h30m))
-    while array.size(arr_l30m) > sessionsToShow
-        old = array.shift(arr_l30m)
-        if not na(old)
-            line.delete(old)
-            log.info("ORB event: trimmed arr_l30m, new_size={0}", array.size(arr_l30m))
-    while array.size(arr_lab30m_h) > sessionsToShow
-        old = array.shift(arr_lab30m_h)
-        if not na(old)
-            label.delete(old)
-            log.info("ORB event: trimmed arr_lab30m_h, new_size={0}", array.size(arr_lab30m_h))
-    while array.size(arr_lab30m_l) > sessionsToShow
-        old = array.shift(arr_lab30m_l)
-        if not na(old)
-            label.delete(old)
-            log.info("ORB event: trimmed arr_lab30m_l, new_size={0}", array.size(arr_lab30m_l))
+    log.info("ORB event: 30m OR created: session={0}, start={1}, H={2}, L={3}", activeSessionName, activeSessionStart, or30m_high, or30m_low)
+
+// Keep labels right-aligned on the latest bar.
+if not na(lab30s_h)
+    label.set_x(lab30s_h, bar_index)
+    label.set_y(lab30s_h, or30s_high)
+if not na(lab30s_l)
+    label.set_x(lab30s_l, bar_index)
+    label.set_y(lab30s_l, or30s_low)
+if not na(lab30m_h)
+    label.set_x(lab30m_h, bar_index)
+    label.set_y(lab30m_h, or30m_high)
+if not na(lab30m_l)
+    label.set_x(lab30m_l, bar_index)
+    label.set_y(lab30m_l, or30m_low)
 
 // Labels are created when the OR lines are drawn (right-aligned on the line)
 
@@ -298,16 +193,4 @@ if show30m and time > or30m_end and not na(or30m_high) and na(h30m)
 // If your chart timeframe is larger than the OR period (for example a 1-minute chart vs 30s OR),
 // the OR will reflect the first bar(s) available and may not precisely represent sub-bar activity.
 
-// Simple Pine Logs for diagnosing ORB behavior.
-// Emit logs every bar (confirmed vs open) and on OR creation/array trimming events.
-// Note: these are intentionally unconditional per your request; use Pine Logs pane filters if needed.
-if barstate.isconfirmed
-    log.info(
-        "ORB debug (confirmed): time={0}, sessionStartForBar={1}, prevSessionStartForBar={2}, computedLatestSessionStart={3}, latestSessionStart={4}, isSessionStartBar={5}, activeSessionStart={6}, or30s_end={7}, or30m_end={8}, or30s_high={9}, or30s_low={10}",
-        time, sessionStartForBar, prevSessionStartForBar, computedLatestSessionStart, latestSessionStart, isSessionStartBar, activeSessionStart, or30s_end, or30m_end, or30s_high, or30s_low
-    )
-else
-    log.warning(
-        "ORB debug (open): time={0}, sessionStartForBar={1}, prevSessionStartForBar={2}, computedLatestSessionStart={3}, latestSessionStart={4}, isSessionStartBar={5}, activeSessionStart={6}, or30s_end={7}, or30m_end={8}, or30s_high={9}, or30s_low={10}",
-        time, sessionStartForBar, prevSessionStartForBar, computedLatestSessionStart, latestSessionStart, isSessionStartBar, activeSessionStart, or30s_end, or30m_end, or30s_high, or30s_low
-    )
+// Logs are emitted on session start and OR creation.
