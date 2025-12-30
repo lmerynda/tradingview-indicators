@@ -30,6 +30,12 @@ orLineColor = input.color(color.rgb(255,215,0), title="OR Line Color")
 orLabelBg = input.color(color.rgb(255,215,0), title="OR Label Background Color")
 orLabelText = input.color(color.black, title="OR Label Text Color")
 
+// Session markers
+showSessionLabels = input.bool(false, title="Show Session Labels")
+asiaColor = input.color(color.rgb(255, 82, 82), title="Asia Session Color")
+eurColor = input.color(color.rgb(33, 150, 243), title="Europe Session Color")
+usColor = input.color(color.rgb(76, 175, 80), title="US Session Color")
+
 // Label style input
 labelSizeInput = input.string("large", title="Label Size", options=["tiny","small","normal","large"])
 lblSize = size.large
@@ -121,6 +127,20 @@ if newSession
         lab30m_l := na
 
     log.info("ORB session start: name={0}, start={1}, tz={2}", activeSessionName, activeSessionStart, sessTz)
+
+// Draw vertical session markers (always) and labels (if enabled)
+if asiaStart
+    line.new(x1=bar_index, y1=low, x2=bar_index, y2=high, color=asiaColor, width=1, style=line.style_dashed)
+    if showSessionLabels
+        label.new(x=bar_index, y=high, text="ASIA", xloc=xloc.bar_index, yloc=yloc.abovebar, style=label.style_label_down, color=asiaColor, textcolor=color.white, size=lblSize)
+if europeStart
+    line.new(x1=bar_index, y1=low, x2=bar_index, y2=high, color=eurColor, width=1, style=line.style_dashed)
+    if showSessionLabels
+        label.new(x=bar_index, y=high, text="EU", xloc=xloc.bar_index, yloc=yloc.abovebar, style=label.style_label_down, color=eurColor, textcolor=color.white, size=lblSize)
+if usStart
+    line.new(x1=bar_index, y1=low, x2=bar_index, y2=high, color=usColor, width=1, style=line.style_dashed)
+    if showSessionLabels
+        label.new(x=bar_index, y=high, text="US", xloc=xloc.bar_index, yloc=yloc.abovebar, style=label.style_label_down, color=usColor, textcolor=color.white, size=lblSize)
 
 // Update high/low during the OR periods
 if show30s
