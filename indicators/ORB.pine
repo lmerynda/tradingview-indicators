@@ -82,6 +82,8 @@ var label lab30s_h = na
 var label lab30s_l = na
 var label lab30m_h = na
 var label lab30m_l = na
+var box box30s = na
+var box box30m = na
 // On new session start: set the anchor, and delete prior session OR levels so only the current session remains.
 if newSession
     activeSessionStart := time
@@ -117,6 +119,12 @@ if newSession
     if not na(lab30m_l)
         label.delete(lab30m_l)
         lab30m_l := na
+    if not na(box30s)
+        box.delete(box30s)
+        box30s := na
+    if not na(box30m)
+        box.delete(box30m)
+        box30m := na
 
     log.info("ORB session start: name={0}, start={1}, tz={2}", activeSessionName, activeSessionStart, sessTz)
 
@@ -158,12 +166,14 @@ if show30m
         or30m_low := na(or30m_low) ? l30m_s : math.min(or30m_low, l30m_s)
 
 // When OR completes, draw box and boundary lines (create once per session)
-// When OR completes, draw lines and labels
+// When OR completes, draw lines, labels, and background boxes
 if show30s and time > or30s_end and not na(or30s_high) and na(h30s)
     // draw horizontal lines extended to the right (gold)
     if not na(activeSessionStart)
         h30s := line.new(x1=activeSessionStart, y1=or30s_high, x2=time, y2=or30s_high, xloc=xloc.bar_time, extend=extend.right, color=orLineColor, width=2)
         l30s := line.new(x1=activeSessionStart, y1=or30s_low, x2=time, y2=or30s_low, xloc=xloc.bar_time, extend=extend.right, color=orLineColor, width=2)
+        // 30s zone background - fairly transparent blue
+        box30s := box.new(left=activeSessionStart, top=or30s_high, right=time, bottom=or30s_low, xloc=xloc.bar_time, extend=extend.right, bgcolor=color.new(color.blue, 85), border_color=color.new(color.blue, 100))
     // text labels on the line (no box, stays at right edge)
     lab30s_h := label.new(x=bar_index + LABEL_OFFSET, y=or30s_high, text=str.format("30s H: {0}", str.tostring(or30s_high, format.mintick)), xloc=xloc.bar_index, yloc=yloc.price, style=label.style_none, textcolor=orLineColor, size=lblSize)
     lab30s_l := label.new(x=bar_index + LABEL_OFFSET, y=or30s_low, text=str.format("30s L: {0}", str.tostring(or30s_low, format.mintick)), xloc=xloc.bar_index, yloc=yloc.price, style=label.style_none, textcolor=orLineColor, size=lblSize)
@@ -173,6 +183,8 @@ if show30m and time > or30m_end and not na(or30m_high) and na(h30m)
     if not na(activeSessionStart)
         h30m := line.new(x1=activeSessionStart, y1=or30m_high, x2=time, y2=or30m_high, xloc=xloc.bar_time, extend=extend.right, color=orLineColor, width=2)
         l30m := line.new(x1=activeSessionStart, y1=or30m_low, x2=time, y2=or30m_low, xloc=xloc.bar_time, extend=extend.right, color=orLineColor, width=2)
+        // 30m zone background - almost completely transparent blue (only the part outside 30s range)
+        box30m := box.new(left=activeSessionStart, top=or30m_high, right=time, bottom=or30m_low, xloc=xloc.bar_time, extend=extend.right, bgcolor=color.new(color.blue, 95), border_color=color.new(color.blue, 100))
     // Only create 30m labels if they don't overlap with 30s levels (30s takes priority)
     if or30m_high != or30s_high and or30m_high != or30s_low
         lab30m_h := label.new(x=bar_index + LABEL_OFFSET, y=or30m_high, text=str.format("30m H: {0}", str.tostring(or30m_high, format.mintick)), xloc=xloc.bar_index, yloc=yloc.price, style=label.style_none, textcolor=orLineColor, size=lblSize)
