@@ -173,8 +173,11 @@ if show30m and time > or30m_end and not na(or30m_high) and na(h30m)
     if not na(activeSessionStart)
         h30m := line.new(x1=activeSessionStart, y1=or30m_high, x2=time, y2=or30m_high, xloc=xloc.bar_time, extend=extend.right, color=orLineColor, width=2)
         l30m := line.new(x1=activeSessionStart, y1=or30m_low, x2=time, y2=or30m_low, xloc=xloc.bar_time, extend=extend.right, color=orLineColor, width=2)
-    lab30m_h := label.new(x=bar_index + LABEL_OFFSET, y=or30m_high, text=str.format("30m H: {0}", str.tostring(or30m_high, format.mintick)), xloc=xloc.bar_index, yloc=yloc.price, style=label.style_none, textcolor=orLineColor, size=lblSize)
-    lab30m_l := label.new(x=bar_index + LABEL_OFFSET, y=or30m_low, text=str.format("30m L: {0}", str.tostring(or30m_low, format.mintick)), xloc=xloc.bar_index, yloc=yloc.price, style=label.style_none, textcolor=orLineColor, size=lblSize)
+    // Only create 30m labels if they don't overlap with 30s levels (30s takes priority)
+    if or30m_high != or30s_high and or30m_high != or30s_low
+        lab30m_h := label.new(x=bar_index + LABEL_OFFSET, y=or30m_high, text=str.format("30m H: {0}", str.tostring(or30m_high, format.mintick)), xloc=xloc.bar_index, yloc=yloc.price, style=label.style_none, textcolor=orLineColor, size=lblSize)
+    if or30m_low != or30s_high and or30m_low != or30s_low
+        lab30m_l := label.new(x=bar_index + LABEL_OFFSET, y=or30m_low, text=str.format("30m L: {0}", str.tostring(or30m_low, format.mintick)), xloc=xloc.bar_index, yloc=yloc.price, style=label.style_none, textcolor=orLineColor, size=lblSize)
     log.info("ORB event: 30m OR created: session={0}, start={1}, H={2}, L={3}", activeSessionName, activeSessionStart, or30m_high, or30m_low)
 
 // Keep labels at the right edge of the chart
