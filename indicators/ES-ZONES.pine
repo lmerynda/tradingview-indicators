@@ -1,0 +1,37 @@
+//@version=6
+indicator("Chris's Zones", overlay=true, max_boxes_count=500)
+
+isES = syminfo.root == "ES" or syminfo.root == "MES"
+isNQ = syminfo.root == "NQ" or syminfo.root == "MNQ"
+
+var float[] mids = array.new<float>()
+var float half = 0.0
+
+if isES
+    mids := array.from(
+        6318.0, 6372.0, 6427.0, 6481.0, 6536.0, 6590.0, 6645.0, 6699.0,
+        6754.0, 6808.0, 6863.0, 6917.0, 6972.0, 7026.0, 7081.0, 7135.0
+    )
+    half := 1.5
+else if isNQ
+    mids := array.from(
+        23044.0, 23196.0, 23348.0, 23501.0, 23653.0, 23805.0, 23957.0, 24110.0,
+        24262.0, 24414.0, 24566.0, 24719.0, 24871.0, 25023.0, 25175.0, 25328.0,
+        25480.0, 25632.0, 25784.0, 25937.0, 26089.0, 26241.0, 26393.0, 26546.0,
+        26698.0, 26850.0
+    )
+    half := 6.0
+
+if barstate.islast
+    for m in mids
+        box.new(
+            left   = time,
+            top    = m + half,
+            right  = time,
+            bottom = m - half,
+            xloc   = xloc.bar_time,
+            border_color = color.new(color.blue, 50),
+            border_width = 1,
+            bgcolor      = color.new(color.blue, 80),
+            extend = extend.both
+        )
