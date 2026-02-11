@@ -24,14 +24,15 @@ else if isNQ
 
 if barstate.islast
     for m in mids
+        color zoneColor = m < close ? color.green : color.red
         box.new(
             left   = time,
             top    = m + half,
             right  = time,
             bottom = m - half,
             xloc   = xloc.bar_time,
-            border_color = color.new(color.blue, 50),
+            border_color = color.new(zoneColor, 50),
             border_width = 1,
-            bgcolor      = color.new(color.blue, 80),
+            bgcolor      = color.new(zoneColor, 80),
             extend = extend.both
         )
