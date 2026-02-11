@@ -31,8 +31,8 @@ if barstate.islast
             right  = time,
             bottom = m - half,
             xloc   = xloc.bar_time,
-            border_color = color.new(zoneColor, 50),
+            border_color = color.new(zoneColor, 40),
             border_width = 1,
-            bgcolor      = color.new(zoneColor, 80),
+            bgcolor      = color.new(zoneColor, 85),
             extend = extend.both
         )
